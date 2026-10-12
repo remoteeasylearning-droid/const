@@ -3,13 +3,40 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+const entryBridgePlugin = {
+  name: 'github-pages-entry-bridge',
+  enforce: 'pre' as const,
+  transformIndexHtml: {
+    order: 'pre' as const,
+    handler(html: string) {
+      return html
+        .replace(/<link\s+rel="stylesheet"\s+crossorigin\s+href="\.\/assets\/index\.css">/g, '')
+        .replace(/<script\s+type="module"\s+crossorigin\s+src="\.\/assets\/index\.js"><\/script>/g, '<script type="module" src="/src/main.tsx"></script>');
+    },
+  },
+};
+
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss()],
+    plugins: [entryBridgePlugin, react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          entryFileNames: 'assets/index.js',
+          chunkFileNames: 'assets/[name].js',
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+              return 'assets/index.css';
+            }
+            return 'assets/[name].[ext]';
+          },
+        },
       },
     },
     server: {
